@@ -1,0 +1,132 @@
+---
+title: "Risk based evaluations of competing agronomic climate adaptation strategies: Workflow example for Bihar"
+format: html
+fig-dpi: 300
+fig-width: 8.88
+fig-align: center
+fig-height: 5
+
+self-contained: true
+author: Maxwell Mkondiwa and Anton Urfels
+editor: visual
+toc: true
+toc-location: left
+number-sections: true
+execute: 
+  message: false
+  warning: false
+  echo: true
+---
+
+# Introduction
+
+# Stylized example
+
+```{r}
+
+# Hypothetical Comparisons ---------------------------------------------------
+
+# Theoretical graphs ------------------------------------------------------------
+
+# Truncated normal -----------------------
+library(truncnorm)
+
+seed(232)
+
+g <- rtruncnorm (n=1000,a=4,b=8, mean=6,sd=0.8 )
+q <- rtruncnorm (n=1000,a=4,b=8, mean=5,sd=1 )
+f <- rtruncnorm (n=1000,a=3,b=9, mean=5,sd=2 )
+df <- data.frame(x = c(g, q, f),Scenarios = factor(rep(c("G","Q","F"), c(1000,1000,1000))))
+df <- df[order(df$x), ]
+
+df$ecdf <- ave(df$x, df$Scenarios, FUN=function(x) seq_along(x)/length(x))
+
+library(ggplot2)
+stochasticdominance=ggplot(df, aes(x, ecdf, colour =   Scenarios,linetype=Scenarios)) + 
+  geom_line(lwd=c(1.5))+
+  scale_linetype_manual(values = c(1,2,3))+
+  # theme(axis.ticks = element_blank(),axis.text.x = element_blank()) +
+  xlab("Yield (tons/ha)") +
+  ylab("Cumulative probability") +
+  scale_color_manual(values = c("grey","black","black"))+
+  theme(panel.grid.major.x = element_blank())+
+  theme(panel.grid.minor.x = element_blank())
+previous_theme <- theme_set(theme_bw())
+stochasticdominance
+
+ggsave("Hypothetical/Figure_stochasticdominance_truncated_normal.png",dpi=300)
+
+```
+
+## Export data for comparisons in Octave
+
+```{r}
+# Data for stochastic dominance comparisons ------------------------------------
+ID=rep(1,1000)
+g=as.data.frame(g*1000)
+q=as.data.frame(q*1000)
+f=as.data.frame(f*1000)
+Rep=1:nrow(g)
+Area=rep(1,1000)
+
+
+QvsG=data.frame(ID,Rep,Area,q,g)
+export(QvsG,colNames=F,"Hypothetical/QvsG.xlsx")
+
+QvsF=data.frame(ID,Rep,Area,q,f)
+export(QvsF,colNames=F,"Hypothetical/QvsF.xlsx")
+
+FvsG=data.frame(ID,Rep,Area,f,g)
+export(FvsG,colNames=F,"Hypothetical/FvsG.xlsx")
+
+# Experiments -------------
+
+# G vs Q: Q as baseline -----------------
+GvsQ=data.frame(ID,Rep,Area,g,q)
+export(GvsQ,colNames=F,"Hypothetical/GvsQ.xlsx")
+
+
+## F vs Q: Q as baseline ---------------
+FvsQ=data.frame(ID,Rep,Area,f,q)
+export(FvsQ,colNames=F,"Hypothetical/FvsQ.xlsx")
+
+## G vs F: F as baseline ----------------
+GvsF=data.frame(ID,Rep,Area,g,f)
+export(GvsF,colNames=F,"Hypothetical/GvsF.xlsx")
+
+
+```
+
+## Octave model
+
+```{Matlab}
+pkg install io-2.6.4.tar.gz
+pkg load io
+
+
+% 1 Q as baseline vs G ---------------------------------------------
+clear
+ndataseq01060216=xlsread('GvsQ.xlsx')
+CreateWTPBoundsbyCell
+CreateTableData
+
+
+xlswrite('RA_GvsQ',RA)
+xlswrite('DescriptiveStat_GvsQ_.xlsx',DescriptiveStat)
+
+
+
+
+
+
+```
+
+# Bihar Model Application
+
+# Conclusion
+
+# References 
+
+Hurley, T., Koo, J., & Tesfaye, K. (2018). Weather risk: how does it change the yield benefits of 395 nitrogen fertilizer and improved maize varieties in sub-Saharan Africa? Agricultural 396 Economics, 49(6), 711-723. https://doi.org/https://doi.org/10.1111/agec.12454.
+
+Mkondiwa, M., and Urfels, A. 2023. "Risk-based evaluations of competing agronomic climate adaptation strategies: The case of rice planting strategies in the Indo Gangetic Plains". Working Paper.
