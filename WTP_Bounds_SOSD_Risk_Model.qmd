@@ -522,7 +522,6 @@ RA = [RA_yearseq_01];
 RA=RA(1,:)
 
 
-
 ```
 
 # Q vs G run
@@ -765,7 +764,6 @@ DescriptiveStat = -999999 * ones(23, 1);
 
 
 clear scenarios ScenariosLEN yearseq ind;
-
 ```
 
 ```{octave, engine.path='C:/Program Files/GNU Octave/Octave-8.2.0/mingw64/bin/octave', warning=F}
@@ -1062,7 +1060,7 @@ DescriptiveStat_rice_baseline_fixedlong=DescriptiveStat
 
 For about 79% of the cells, farmer practice is sub-optimal.
 
-## Wheat 
+## Wheat
 
 ```{octave, engine.path='C:/Program Files/GNU Octave/Octave-8.2.0/mingw64/bin/octave', warning=F}
 
