@@ -1,0 +1,189 @@
+---
+title: "Risk based evaluations of competing agronomic climate adaptation strategies: Workflow example for rice planting strategies from crop growth simulation evidence"
+format: 
+    html:
+      code-fold: true
+      code-tools: true
+fig-dpi: 300
+fig-width: 8.88
+fig-align: center
+fig-height: 5
+
+self-contained: true
+author: Maxwell Mkondiwa, Anton Urfels and Terry Hurley
+editor: visual
+toc: true
+toc-location: left
+number-sections: true
+execute: 
+  message: false
+  warning: false
+  echo: true
+---
+
+# Introduction
+
+This notebook presents a novel approach for developing and targeting robust recommendations from crop simulation, long term experiments or multi-season survey data based on a risk optimization model.
+
+For the computational model, Terry Hurley at University of Minnesota wrote the first Matlab code from which we have adapted to Octave and R.
+
+To reproduce the analyses, one requires Octave installation. You can download Octave from here: https://octave.org/download.
+
+
+# Stylized example
+In order to run this step, one needs to install Octave. The folder should contain the different functions that used for the optimization including CreateWTPBoundsbyCell and CreateTableData.
+
+## Stochastic dominance analysis using graphics
+```{r}
+# Hypothetical Comparisons ---------------------------------------------------
+
+# Theoretical graphs ------------------------------------------------------------
+
+# Truncated normal -----------------------
+library(truncnorm)
+g <- rtruncnorm (n=1000,a=4,b=8, mean=6,sd=0.8 )
+q <- rtruncnorm (n=1000,a=4,b=8, mean=5,sd=1 )
+f <- rtruncnorm (n=1000,a=3,b=9, mean=5,sd=2 )
+df <- data.frame(x = c(g, q, f),Scenarios = factor(rep(c("G","Q","F"), c(1000,1000,1000))))
+df <- df[order(df$x), ]
+
+df$ecdf <- ave(df$x, df$Scenarios, FUN=function(x) seq_along(x)/length(x))
+
+library(ggplot2)
+stochasticdominance=ggplot(df, aes(x, ecdf, colour =   Scenarios,linetype=Scenarios)) + 
+  geom_line(lwd=c(1.5))+
+  scale_linetype_manual(values = c(1,2,3))+
+  # theme(axis.ticks = element_blank(),axis.text.x = element_blank()) +
+  xlab("Yield (tons/ha)") +
+  ylab("Cumulative probability") +
+  scale_color_manual(values = c("grey","black","black"))+
+  theme(panel.grid.major.x = element_blank())+
+  theme(panel.grid.minor.x = element_blank())
+previous_theme <- theme_set(theme_bw())
+stochasticdominance
+
+```
+
+
+## Clean data for octave
+```{r}
+library(rio)
+
+library(rio)
+ID=rep(1,1000)
+g=as.data.frame(g*1000)
+q=as.data.frame(q*1000)
+f=as.data.frame(f*1000)
+Rep=1:nrow(g)
+Area=rep(1,1000)
+
+
+QvsG=data.frame(ID,Rep,Area,q,g)
+export(QvsG,colNames=F,"QvsG.xlsx")
+QvsG=as.matrix(QvsG)
+colnames(QvsG) <- c(1,2,3,4,5)
+
+library(rhdf5)
+h5save(QvsG,file="QvsG.hdf")
+
+QvsF=data.frame(ID,Rep,Area,q,f)
+export(QvsF,colNames=F,"QvsF.xlsx")
+QvsF=as.matrix(QvsF)
+colnames(QvsF) <- c(1,2,3,4,5)
+h5save(QvsF,file="QvsF.hdf")
+
+
+FvsG=data.frame(ID,Rep,Area,f,g)
+export(FvsG,colNames=F,"FvsG.xlsx")
+FvsG=as.matrix(FvsG)
+colnames(FvsG) <- c(1,2,3,4,5)
+h5save(FvsG,file="FvsG.hdf")
+
+
+# Experiments -------------
+
+# G vs Q: Q as baseline -----------------
+GvsQ=data.frame(ID,Rep,Area,g,q)
+export(GvsQ,colNames=F,"GvsQ.xlsx")
+GvsQ=as.matrix(GvsQ)
+colnames(GvsQ) <- c(1,2,3,4,5)
+h5save(GvsQ,file="GvsQ.hdf")
+
+## F vs Q: Q as baseline ---------------
+FvsQ=data.frame(ID,Rep,Area,f,q)
+export(FvsQ,colNames=F,"FvsQ.xlsx")
+FvsQ=as.matrix(FvsQ)
+colnames(FvsQ) <- c(1,2,3,4,5)
+h5save(FvsQ,file="FvsQ.hdf")
+
+
+## G vs F: F as baseline ----------------
+GvsF=data.frame(ID,Rep,Area,g,f)
+export(GvsF,colNames=F,"GvsF.xlsx")
+GvsF=as.matrix(GvsF)
+colnames(GvsF) <- c(1,2,3,4,5)
+h5save(GvsF,file="GvsF.hdf")
+
+```
+
+## Q vs G 
+
+```{octave, engine.path='C:/Program Files/GNU Octave/Octave-8.2.0/mingw64/bin/octave', warning=F}
+
+load -hdf5 "QvsG.hdf"
+
+ndataseq01060216=QvsG
+
+whos
+
+CreateWTPBoundsbyCell
+
+save -hdf5 "RA.hdf"
+
+
+
+
+
+#xlswrite('RA_GvsQ_fromR',RA)
+#xlswrite('DescriptiveStat_GvsQ_fromR.xlsx',DescriptiveStat)
+
+
+
+```
+
+#### Calculate descriptive statistics
+```{octave, engine.path='C:/Program Files/GNU Octave/Octave-8.2.0/mingw64/bin/octave', warning=F}
+
+load -hdf5 "RA.hdf"
+
+
+CreateTableData
+
+
+DescriptiveStat2=DescriptiveStat
+
+
+```
+# Bihar Model Application
+
+The example above has shown for a case where there is one location in which there are multiple years of data. In the case of when one has run a crop growth model and has ncdf4 outputs, then one can use the same approach to estimate the model for the whole state.
+
+```{r}
+
+
+
+
+
+
+
+```
+
+# Conclusion
+
+# References
+
+Hurley, T., Koo, J., & Tesfaye, K. (2018). Weather risk: how does it change the yield benefits of 395 nitrogen fertilizer and improved maize varieties in sub-Saharan Africa? Agricultural 396 Economics, 49(6), 711-723. https://doi.org/https://doi.org/10.1111/agec.12454.
+
+Levy, H. (2006). Stochastic Dominance: Investment Decision Making Under Uncertainty (Second Edition). Springer. New York, NY.Pages 180-182.
+
+Mkondiwa, M., and Urfels, A. 2023. "Risk-based evaluations of competing agronomic climate adaptation strategies: The case of rice planting strategies in the Indo Gangetic Plains". Working Paper.

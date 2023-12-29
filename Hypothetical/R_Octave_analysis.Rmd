@@ -1,0 +1,125 @@
+---
+title: "Untitled"
+author: "Maxwell Mkondiwa"
+date: "2023-12-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Stylized example
+
+## Stochastic dominance analysis using graphics
+```{r}
+# Hypothetical Comparisons ---------------------------------------------------
+
+# Theoretical graphs ------------------------------------------------------------
+
+# Truncated normal -----------------------
+library(truncnorm)
+g <- rtruncnorm (n=1000,a=4,b=8, mean=6,sd=0.8 )
+q <- rtruncnorm (n=1000,a=4,b=8, mean=5,sd=1 )
+f <- rtruncnorm (n=1000,a=3,b=9, mean=5,sd=2 )
+df <- data.frame(x = c(g, q, f),Scenarios = factor(rep(c("G","Q","F"), c(1000,1000,1000))))
+df <- df[order(df$x), ]
+
+df$ecdf <- ave(df$x, df$Scenarios, FUN=function(x) seq_along(x)/length(x))
+
+library(ggplot2)
+stochasticdominance=ggplot(df, aes(x, ecdf, colour =   Scenarios,linetype=Scenarios)) + 
+  geom_line(lwd=c(1.5))+
+  scale_linetype_manual(values = c(1,2,3))+
+  # theme(axis.ticks = element_blank(),axis.text.x = element_blank()) +
+  xlab("Yield (tons/ha)") +
+  ylab("Cumulative probability") +
+  scale_color_manual(values = c("grey","black","black"))+
+  theme(panel.grid.major.x = element_blank())+
+  theme(panel.grid.minor.x = element_blank())
+previous_theme <- theme_set(theme_bw())
+stochasticdominance
+
+```
+
+
+## Clean data for octave
+```{r}
+library(rio)
+
+library(rio)
+ID=rep(1,1000)
+g=as.data.frame(g*1000)
+q=as.data.frame(q*1000)
+f=as.data.frame(f*1000)
+Rep=1:nrow(g)
+Area=rep(1,1000)
+
+
+QvsG=data.frame(ID,Rep,Area,q,g)
+
+QvsG=as.matrix(QvsG)
+colnames(QvsG) <- c(1,2,3,4,5)
+
+#GvsQ <- as.matrix(import("GvsQ.xlsx", sep=""))
+
+colnames(QvsG) <- c(1, 2,3,4,5)
+
+
+library(rhdf5)
+h5save(QvsG,file="QvsG.hdf")
+```
+
+# Introduction 
+
+```{octave, engine.path='C:/Program Files/GNU Octave/Octave-8.2.0/mingw64/bin/octave', warning=F}
+
+load -hdf5 "QvsG.hdf"
+
+ndataseq01060216=QvsG
+
+whos
+
+CreateWTPBoundsbyCell
+
+save -hdf5 "RA.hdf"
+
+
+
+
+
+#xlswrite('RA_GvsQ_fromR',RA)
+#xlswrite('DescriptiveStat_GvsQ_fromR.xlsx',DescriptiveStat)
+
+
+
+```
+
+# Calculate descriptive statistics
+```{octave, engine.path='C:/Program Files/GNU Octave/Octave-8.2.0/mingw64/bin/octave', warning=F}
+
+load -hdf5 "RA.hdf"
+
+
+CreateTableData
+
+
+DescriptiveStat2=DescriptiveStat
+
+
+```
+
+
+# Read the A
+```{r}
+
+
+
+
+
+
+library(terra)
+#s <- sds("A.hdf")
+#s
+
+
