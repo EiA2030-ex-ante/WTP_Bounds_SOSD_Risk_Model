@@ -10,7 +10,8 @@ fig-align: center
 fig-height: 5
 
 self-contained: true
-author: Maxwell Mkondiwa, Anton Urfels and Terry Hurley
+author: Maxwell Mkondiwa (m.mkondiwa@cgiar.org), Anton Urfels and Terry Hurley
+
 editor: visual
 toc: true
 toc-location: left
@@ -28,6 +29,34 @@ This notebook presents a novel approach for developing and targeting robust reco
 For the computational model, Terry Hurley at University of Minnesota wrote the first Matlab code from which we have adapted to Octave and R.
 
 To reproduce the analyses, one requires Octave installation. You can download Octave from here: https://octave.org/download.
+
+**Purpose:** The commonly used risk measures focus on central moments (e.g., variance, conditional value at risk, skewness) of the distribution. Yield distributions overtime and space are however more complicated such that one may need to consider the whole distribution when evaluating which agronomic practice will likely work where and when. The use of stochastic dominance especially second order stochastic dominance allows the relationship between the cumulative distribution function of the outcome and the expected utility maximization behaviour under risk aversion. A computational approach developed by Hurley et al (2018) allows one to compute willingness to pay lower and upper bounds for a new technology to second order stochastically dominate an old practice such that any risk averse farmer will choose the new technology.
+
+***Advantages***
+
+-   Unlike mean-variance optimization, this optimization strategy considers distributional comparisons
+
+***Disadvantages***
+
+-   Computationally expensive especially when implementing across a large area of interest.
+
+-   The comparisons are pairwise thereby requiring many combinations to come up with the best alternative for each pixel.
+
+-   Difficult to apply with survey or agronomic datasets are it requires long timeseries. However, it is possible to implement the approach with monte-carlo simulated survey or agronomic trial datasets.
+
+***Stylized use case: Where to target sowing date advisories?***
+
+We use gridded crop growth simulation model results to identify scenarios that would be agronomically and economically beneficial even for a risk averse farmer.
+
+***Input data requirements***
+
+For the spatial exante (economic) component of the model, one only needs gridded crop simulation results for each of the scenarios.
+
+***Toolkit workflow***
+
+Figure 1 shows the workflow for implementation the computational second order stochastic dominance analysis.
+
+![](WTP_picture.png)
 
 # Stylized example
 
@@ -80,9 +109,10 @@ Area=rep(1,1000)
 
 QvsG=data.frame(ID,Rep,Area,q,g)
 export(QvsG,colNames=F,"QvsG.xlsx")
+
 QvsG=as.matrix(QvsG)
 colnames(QvsG) <- c(1,2,3,4,5)
-
+export(QvsG,"QvsG.csv")
 library(rhdf5)
 h5save(QvsG,file="QvsG.hdf")
 
@@ -90,6 +120,7 @@ QvsF=data.frame(ID,Rep,Area,q,f)
 export(QvsF,colNames=F,"QvsF.xlsx")
 QvsF=as.matrix(QvsF)
 colnames(QvsF) <- c(1,2,3,4,5)
+export(QvsF,"QvsF.csv")
 h5save(QvsF,file="QvsF.hdf")
 
 
@@ -97,6 +128,7 @@ FvsG=data.frame(ID,Rep,Area,f,g)
 export(FvsG,colNames=F,"FvsG.xlsx")
 FvsG=as.matrix(FvsG)
 colnames(FvsG) <- c(1,2,3,4,5)
+export(FvsG,"FvsG.csv")
 h5save(FvsG,file="FvsG.hdf")
 
 
@@ -107,6 +139,7 @@ GvsQ=data.frame(ID,Rep,Area,g,q)
 export(GvsQ,colNames=F,"GvsQ.xlsx")
 GvsQ=as.matrix(GvsQ)
 colnames(GvsQ) <- c(1,2,3,4,5)
+export(GvsQ,"GvsQ.csv")
 h5save(GvsQ,file="GvsQ.hdf")
 
 ## F vs Q: Q as baseline ---------------
@@ -114,6 +147,7 @@ FvsQ=data.frame(ID,Rep,Area,f,q)
 export(FvsQ,colNames=F,"FvsQ.xlsx")
 FvsQ=as.matrix(FvsQ)
 colnames(FvsQ) <- c(1,2,3,4,5)
+export(FvsQ,"FvsQ.csv")
 h5save(FvsQ,file="FvsQ.hdf")
 
 
@@ -122,6 +156,7 @@ GvsF=data.frame(ID,Rep,Area,g,f)
 export(GvsF,colNames=F,"GvsF.xlsx")
 GvsF=as.matrix(GvsF)
 colnames(GvsF) <- c(1,2,3,4,5)
+export(GvsF,"GvsF.csv")
 h5save(GvsF,file="GvsF.hdf")
 
 ```
@@ -520,22 +555,27 @@ clear apones LEN;
 RA = [RA_yearseq_01];
 
 RA=RA(1,:)
-
 ```
 
 # Q vs G run
 
 ```{octave, engine.path='C:/Program Files/GNU Octave/Octave-8.2.0/mingw64/bin/octave', warning=F}
 
-load -hdf5 "QvsG.hdf"
+%load -hdf5 "QvsG.hdf"
 
-ndataseq01060216=QvsG
+%ndataseq01060216=QvsG
+
+ndataseq01060216=dlmread('QvsG.csv');
 
 whos
 
 CreateWTPBoundsbyCell
 
-save -hdf5 "RA.hdf"
+%dlmwrite('RA.txt',RA,'-append','roffset',1,'delimiter',' ')
+dlmwrite('RA.csv',RA)
+%save -hdf5 "RA.hdf"
+
+
 
 
 
@@ -767,9 +807,10 @@ clear scenarios ScenariosLEN yearseq ind;
 
 ```{octave, engine.path='C:/Program Files/GNU Octave/Octave-8.2.0/mingw64/bin/octave', warning=F}
 
-load -hdf5 "RA.hdf"
+%load -hdf5 "RA.hdf"
 
-
+RA=dlmread('RA.csv');
+RA
 CreateTableData
 
 
@@ -784,18 +825,18 @@ We can see here that Q does not stochastically dominate G. In fact, it shows tha
 
 ```{octave, engine.path='C:/Program Files/GNU Octave/Octave-8.2.0/mingw64/bin/octave', warning=F}
 
-load -hdf5 "GvsQ.hdf"
+%load -hdf5 "GvsQ.hdf"
 
-ndataseq01060216=GvsQ
+ndataseq01060216=dlmread('GvsQ.csv');
+
+%ndataseq01060216=GvsQ
 
 whos
 
 CreateWTPBoundsbyCell
 
-save -hdf5 "RA.hdf"
-
-
-load -hdf5 "RA.hdf"
+%save -hdf5 "RA.hdf"
+%load -hdf5 "RA.hdf"
 
 
 CreateTableData
@@ -902,8 +943,6 @@ create_csv("wheat","wheat_yield")
 
 
 
-
-
 ```
 
 ## Clean for Octave
@@ -920,8 +959,8 @@ library(rio)
 
 ## RICE-- Fixed long ---------------------------------------
 rice_fixed_long=read.csv("rice_fixed_long.csv")
-rice_fixed_long <- na_if(rice_fixed_long, '-99')  #Replace all -99 with NA
-rice_fixed_long <- na_if(rice_fixed_long, '-999999')
+#rice_fixed_long <- na_if(rice_fixed_long, '-99')  #Replace all -99 with NA
+#rice_fixed_long <- na_if(rice_fixed_long, '-999999')
 rice_fixed_long=rename(rice_fixed_long,ID=X)
 
 rice_fixed_long$rice_area=rep(1,3386)
@@ -933,8 +972,8 @@ rice_fixed_long_long$year=as.numeric(gsub('[^0-9]', '',rice_fixed_long_long$year
 
 ## RICE-- Baseline ---------------------------
 rice_baseline=read.csv("rice_baseline.csv")
-rice_baseline <- na_if(rice_baseline, '-99')  #Replace all -99 with NA
-rice_baseline <- na_if(rice_baseline, '-999999')
+#rice_baseline <- na_if(rice_baseline, '-99')  #Replace all -99 with NA
+#rice_baseline <- na_if(rice_baseline, '-999999')
 rice_baseline=rename(rice_baseline,ID=X)
 rice_baseline_long <- melt(setDT(rice_baseline), id.vars = c("ID"),value.name=c("baseline_rice_yield") ,variable.name = "year")
 
@@ -954,12 +993,18 @@ rice_baseline_fixedlong$fixed_long_rice_yield[is.na(rice_baseline_fixedlong$fixe
 rice_baseline_fixedlong=rice_baseline_fixedlong[,c(1,2,3,5,4)]
 
 export(rice_baseline_fixedlong,colNames=F,"rice_baseline_fixedlong_s.xlsx")
+
 library(rhdf5)
 rice_baseline_fixedlong=as.matrix(rice_baseline_fixedlong)
 colnames(rice_baseline_fixedlong) <- c(1,2,3,4,5)
+
+export(rice_baseline_fixedlong,"rice_baseline_fixedlong.csv")
+
 h5save(rice_baseline_fixedlong,file="rice_baseline_fixedlong.hdf",createnewfile = TRUE)
 
 rice_baseline_fixedlong=as.data.frame(rice_baseline_fixedlong)
+
+
 # Remove all zeros and nas
 rice_baseline_fixedlong_nonzero=subset(rice_baseline_fixedlong, rice_baseline_fixedlong$fixed_long_rice_yield!=0)
 
@@ -976,8 +1021,8 @@ h5save(rice_baseline_fixedlong_nonzero,file="rice_baseline_fixedlong_nonzero.hdf
 # WHEAT ---------------------------------------------------------------------------------------------------
 ## wheat-- fixedlong ---------------------------------------
 wheat_fixedlong=read.csv("wheat_fixed_long.csv")
-wheat_fixedlong <- na_if(wheat_fixedlong, '-99')  #Replace all -99 with NA
-wheat_fixedlong <- na_if(wheat_fixedlong, '-999999')  #Replace all -99 with NA
+#wheat_fixedlong <- na_if(wheat_fixedlong, '-99')  #Replace all -99 with NA
+#wheat_fixedlong <- na_if(wheat_fixedlong, '-999999')  #Replace all -99 with NA
 wheat_fixedlong=rename(wheat_fixedlong,ID=X)
 
 wheat_fixedlong$wheat_area=rep(1,3386)
@@ -990,8 +1035,8 @@ wheat_fixedlong_long$year=as.numeric(gsub('[^0-9]', '',wheat_fixedlong_long$year
 
 ## wheat-- Baseline ---------------------------
 wheat_baseline=read.csv("wheat_baseline.csv")
-wheat_baseline <- na_if(wheat_baseline, '-99')  #Replace all -99 with NA
-wheat_baseline <- na_if(wheat_baseline, '-999999')  #Replace all -99 with NA
+#wheat_baseline <- na_if(wheat_baseline, '-99')  #Replace all -99 with NA
+#wheat_baseline <- na_if(wheat_baseline, '-999999')  #Replace all -99 with NA
 wheat_baseline=rename(wheat_baseline,ID=X)
 wheat_baseline_long <- melt(setDT(wheat_baseline), id.vars = c("ID"),value.name=c("baseline_wheat_yield") ,variable.name = "year")
 wheat_baseline_long$year=as.numeric(gsub('[^0-9]', '',wheat_baseline_long$year))
@@ -1010,6 +1055,9 @@ library(rhdf5)
 
 wheat_baseline_long=as.matrix(wheat_baseline_long)
 colnames(wheat_baseline_long) <- c(1,2,3,4,5)
+
+export(wheat_baseline_long,"wheat_baseline_fixedlong.csv")
+
 h5save(wheat_baseline_long,file="wheat_baseline_long.hdf",createnewfile = TRUE)
 
 # Remove all zeros and nas
@@ -1019,14 +1067,14 @@ wheat_baseline_long_nonzero=subset(wheat_baseline_long_nonzero, wheat_baseline_l
 
 export(wheat_baseline_long_nonzero,colNames=F,"wheat_baseline_long_nonzero.xlsx")
 
-library(rhdf5)
+#library(rhdf5)
 
-wheat_baseline_long_nonzero=as.matrix(wheat_baseline_long_nonzero)
-colnames(wheat_baseline_long_nonzero) <- c(1,2,3,4,5)
+#wheat_baseline_long_nonzero=as.matrix(wheat_baseline_long_nonzero)
+#colnames(wheat_baseline_long_nonzero) <- c(1,2,3,4,5)
 
-h5save(wheat_baseline_long_nonzero,file="wheat_baseline_long_nonzero.hdf",createnewfile = TRUE)
+#h5save(wheat_baseline_long_nonzero,file="wheat_baseline_long_nonzero.hdf",createnewfile = TRUE)
 
-h5closeAll()
+#h5closeAll()
 
 
 ```
@@ -1037,19 +1085,19 @@ h5closeAll()
 
 ```{octave, engine.path='C:/Program Files/GNU Octave/Octave-8.2.0/mingw64/bin/octave', warning=F}
 
-load -hdf5 "rice_baseline_fixedlong.hdf"
+%load -hdf5 "rice_baseline_fixedlong.hdf"
+%ndataseq01060216=rice_baseline_fixedlong
 
-ndataseq01060216=rice_baseline_fixedlong
+ndataseq01060216=dlmread('rice_baseline_fixedlong.csv');
 
 whos
 
 CreateWTPBoundsbyCell_Bihar
 
-save -hdf5 "RA.hdf"
+%save -hdf5 "RA.hdf"
+%load -hdf5 "RA.hdf"
 
-
-load -hdf5 "RA.hdf"
-
+dlmwrite('RA_rice_baseline_fixedlong.txt',RA,'-append','roffset',1,'delimiter',' ')
 
 CreateTableData_Bihar
 
@@ -1059,23 +1107,100 @@ DescriptiveStat_rice_baseline_fixedlong=DescriptiveStat
 
 For about 79% of the cells, farmer practice is sub-optimal.
 
+#### Mapping the results
+```{r}
+RA_rice_baseline_fixedlong<- import("RA_rice_baseline_fixedlong.txt", col_names = FALSE)
+
+# RA column names
+# %  1 = cellID
+# %  2 = Comparison Technology ID
+# %  3 = Base Technology ID
+# %  4 = Mean Yield for Comp
+# %  5 = Standard Deviation of Yield for Comp
+# %  6 = CV of Yield for Comp
+# %  7 = Maximum Yield for Comp
+# %  8 = Minimum Yield for Comp
+# %  9 = Probability of Crop Failure for Comp
+# % 10 = Min Proportion for Comp to SOSD Base
+# % 11 = Mean Yield for Base
+# % 12 = Standard Deviation of Yield for Base
+# % 13 = CV of Yield for Base
+# % 14 = Maximum Yield for Base
+# % 15 = Minimum Yield for Base
+# % 16 = Probability of Crop Failure for Base
+# % 17 = Min Proportion for Base to SOSD Comp
+# % 18 = Difference in mean Comp - Base
+# % 19 = Difference in standard deviation Comp - Base
+# % 20 = Difference in CV Comp - Base
+# % 21 = Difference in Prob of Crop Failure Comp - Base
+# % 22 = Min Proportion for Comp to SOSD Base divided by average base yield
+# % 23 = Min Proportion for Base to SOSD Comp divided by average base yield
+# % 24 = Comp More Risky (-1)/less Risky (1)/ Indeterminant (0) compared to Base
+# % 25 = Wheat Area
+
+columnnames=c("CellID","CompID","BaseID","CompYield_Mean","CompYield_SD",
+              "CompYield_CV","CompYield_Max","CompYield_Min","CompCropFailureProb","CompMinPropSOSDBase",
+              "BaseYield_Mean","BaseYield_SD","BaseYield_CV","BaseYield_Max","BaseYield_Min",
+              "BaseCropFailureProb","BaseMinPropSOSDComp","Diff_Mean_CompBase","Diff_SD_CompBase","Diff_CV_CompBase",
+              "Diff_CropFailureProbCompBase","MinProp_CompSOSDBase_Divdbaseyield","MinProp_BaseSOSDComp_Divdbaseyield",
+              "Riskiness_Comp","RiceArea")
+
+names(RA_rice_baseline_fixedlong)[1:25]=c("CellID","CompID","BaseID","CompYield_Mean","CompYield_SD",                         "CompYield_CV","CompYield_Max","CompYield_Min","CompCropFailureProb","CompMinPropSOSDBase",
+                                          "BaseYield_Mean","BaseYield_SD","BaseYield_CV","BaseYield_Max","BaseYield_Min",                                     "BaseCropFailureProb","BaseMinPropSOSDComp","Diff_Mean_CompBase","Diff_SD_CompBase","Diff_CV_CompBase",                    "Diff_CropFailureProbCompBase","MinProp_CompSOSDBase_Divdbaseyield","MinProp_BaseSOSDComp_Divdbaseyield","Riskiness_Comp","RiceArea")
+
+# Based on the raster extraction in the initial steps
+
+files <- c(file1)
+r <- load_sims(files,"rice_yield",aoi,NA)
+r1 <- r[[1]][[1]]
+
+# Simulated rice yield for the farmer practice
+plot(r1)
+# Revenue ------------------------------------------
+
+### Fixed long versus farmer practice -------------------
+m <- RA_rice_baseline_fixedlong
+
+v <- as.vector(getValues(r1))
+t <- which(!is.na(v))
+
+r1_RA_rice_baseline_fixedlong_c<- r1
+
+values(r1_RA_rice_baseline_fixedlong_c)[t]<- m$Riskiness_Comp
+library(rasterVis)
+levelplot(r1_RA_rice_baseline_fixedlong_c,par.settings=RdBuTheme(),margin=F, main="Rice yield optimal strategy for FP vs FL")
+
+
+RA_rice_baseline_fixedlong_plot=gplot(r1_RA_rice_baseline_fixedlong_c) +
+  geom_raster(aes(fill = factor(value)))+
+  scale_fill_manual(values = c("#F8766D","#619CFF", "#00BA38"),na.value = "transparent",labels=c("Clearly worse","Better or worse","Clearly better",""))+
+  labs(x="Longitude",y="Latitude",title="Farmer practice",fill="Willingness to pay")
+previous_theme <- theme_set(theme_bw())
+RA_rice_baseline_fixedlong_plot
+
+```
 ## Wheat
 
 ```{octave, engine.path='C:/Program Files/GNU Octave/Octave-8.2.0/mingw64/bin/octave', warning=F}
 
-load -hdf5 "wheat_baseline_long.hdf"
+%load -hdf5 "wheat_baseline_long.hdf"
+%ndataseq01060216=wheat_baseline_long
 
-ndataseq01060216=wheat_baseline_long
+ndataseq01060216=dlmread('wheat_baseline_fixedlong.csv');
 
 whos
 
 CreateWTPBoundsbyCell_Bihar
 
+%save -hdf5 "RA.hdf"
+%load -hdf5 "RA.hdf"
 
-save -hdf5 "RA.hdf"
+dlmwrite('RA_wheat_baseline_fixedlong.txt',RA,'-append','roffset',1,'delimiter',' ')
+whos
 
 
-load -hdf5 "RA.hdf"
+%save -hdf5 "RA.hdf"
+%load -hdf5 "RA.hdf"
 
 
 CreateTableData_Bihar
@@ -1087,7 +1212,83 @@ DescriptiveStat_wheat_baseline_long=DescriptiveStat
 
 ```
 
+#### Mapping the results
+```{r}
+RA_wheat_baseline_fixedlong<- import("RA_wheat_baseline_fixedlong.txt", col_names = FALSE)
+
+# RA column names
+# %  1 = cellID
+# %  2 = Comparison Technology ID
+# %  3 = Base Technology ID
+# %  4 = Mean Yield for Comp
+# %  5 = Standard Deviation of Yield for Comp
+# %  6 = CV of Yield for Comp
+# %  7 = Maximum Yield for Comp
+# %  8 = Minimum Yield for Comp
+# %  9 = Probability of Crop Failure for Comp
+# % 10 = Min Proportion for Comp to SOSD Base
+# % 11 = Mean Yield for Base
+# % 12 = Standard Deviation of Yield for Base
+# % 13 = CV of Yield for Base
+# % 14 = Maximum Yield for Base
+# % 15 = Minimum Yield for Base
+# % 16 = Probability of Crop Failure for Base
+# % 17 = Min Proportion for Base to SOSD Comp
+# % 18 = Difference in mean Comp - Base
+# % 19 = Difference in standard deviation Comp - Base
+# % 20 = Difference in CV Comp - Base
+# % 21 = Difference in Prob of Crop Failure Comp - Base
+# % 22 = Min Proportion for Comp to SOSD Base divided by average base yield
+# % 23 = Min Proportion for Base to SOSD Comp divided by average base yield
+# % 24 = Comp More Risky (-1)/less Risky (1)/ Indeterminant (0) compared to Base
+# % 25 = Wheat Area
+
+columnnames=c("CellID","CompID","BaseID","CompYield_Mean","CompYield_SD",
+              "CompYield_CV","CompYield_Max","CompYield_Min","CompCropFailureProb","CompMinPropSOSDBase",
+              "BaseYield_Mean","BaseYield_SD","BaseYield_CV","BaseYield_Max","BaseYield_Min",
+              "BaseCropFailureProb","BaseMinPropSOSDComp","Diff_Mean_CompBase","Diff_SD_CompBase","Diff_CV_CompBase",
+              "Diff_CropFailureProbCompBase","MinProp_CompSOSDBase_Divdbaseyield","MinProp_BaseSOSDComp_Divdbaseyield",
+              "Riskiness_Comp","wheatArea")
+
+names(RA_wheat_baseline_fixedlong)[1:25]=c("CellID","CompID","BaseID","CompYield_Mean","CompYield_SD",                         "CompYield_CV","CompYield_Max","CompYield_Min","CompCropFailureProb","CompMinPropSOSDBase",
+                                          "BaseYield_Mean","BaseYield_SD","BaseYield_CV","BaseYield_Max","BaseYield_Min",                                     "BaseCropFailureProb","BaseMinPropSOSDComp","Diff_Mean_CompBase","Diff_SD_CompBase","Diff_CV_CompBase",                    "Diff_CropFailureProbCompBase","MinProp_CompSOSDBase_Divdbaseyield","MinProp_BaseSOSDComp_Divdbaseyield","Riskiness_Comp","wheatArea")
+
+# Based on the raster extraction in the initial steps
+
+files <- c(file1)
+r <- load_sims(files,"wheat_yield",aoi,NA)
+r1 <- r[[1]][[1]]
+
+# Simulated wheat yield for the farmer practice
+plot(r1)
+# Revenue ------------------------------------------
+
+### Fixed long versus farmer practice -------------------
+m <- RA_wheat_baseline_fixedlong
+
+v <- as.vector(getValues(r1))
+t <- which(!is.na(v))
+
+r1_RA_wheat_baseline_fixedlong_c<- r1
+
+values(r1_RA_wheat_baseline_fixedlong_c)[t]<- m$Riskiness_Comp
+library(rasterVis)
+levelplot(r1_RA_wheat_baseline_fixedlong_c,par.settings=RdBuTheme(),margin=F, main="wheat yield optimal strategy for FP vs FL")
+
+
+RA_wheat_baseline_fixedlong_plot=gplot(r1_RA_wheat_baseline_fixedlong_c) +
+  geom_raster(aes(fill = factor(value)))+
+  scale_fill_manual(values = c("#F8766D","#619CFF", "#00BA38"),na.value = "transparent",labels=c("Clearly worse","Better or worse","Clearly better",""))+
+  labs(x="Longitude",y="Latitude",title="Farmer practice",fill="Willingness to pay")
+previous_theme <- theme_set(theme_bw())
+RA_wheat_baseline_fixedlong_plot
+
+```
+
 # Conclusion
+In conclusion, we have demonstrated a workflow for generating willingness to pay measures so that even a risk averse farmer can find the technology beneficial. This is important as it can allow targeting of scenarios and prioritizing investments.
+
+
 
 # References
 
